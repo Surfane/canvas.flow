@@ -37,6 +37,10 @@ const EVENT = {
     }
   },
   CANVAS: {
+    ONMOUSELEAVE: {
+      NAME: 'mouseleave',
+      EVENT: Symbol()
+    },
     ONMOUSEWHEEL: {
       NAME: 'mousewheel',
       EVENT: Symbol()
@@ -380,6 +384,13 @@ export class Canvas {
   };
 
   [EVENT.CANVAS.ONMOUSEUP.EVENT] = event => {
+    event.preventDefault()
+    event.stopPropagation()
+    this[CANVAS.FRAME].draggableAll = false
+    this[CANVAS.FRAME].draggableElement = false
+  };
+
+  [EVENT.CANVAS.ONMOUSELEAVE.EVENT] = event => {
     event.preventDefault()
     event.stopPropagation()
     this[CANVAS.FRAME].draggableAll = false
