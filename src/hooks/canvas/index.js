@@ -459,7 +459,12 @@ export class Canvas {
 
   [EVENT.GRAPHIC.DRAW]() {
     this[CANVAS.VECTOR].vector.map(item => {
-      this[EVENT.GRAPHIC.LINE.DRAW](this[CANVAS.CONTEXT], item)
+      this[EVENT.GRAPHIC.LINE.DRAW](this[CANVAS.CONTEXT], {
+        ...item,
+        beginStyle: this[CANVAS.GRAPHIC].graphic.get(item.begin).style
+          .fillStyle,
+        endStyle: this[CANVAS.GRAPHIC].graphic.get(item.end).style.fillStyle
+      })
     })
     if (this[CANVAS.VECTOR].activeVector) {
       this[EVENT.GRAPHIC.DRAW_ACTIVE_VECTOR](
@@ -468,7 +473,8 @@ export class Canvas {
       )
       this[EVENT.GRAPHIC.LINE.DRAW](this[CANVAS.CONTEXT], {
         ...this[CANVAS.VECTOR].activeVector,
-        fillStyle: '#FFF'
+        fillStyle: '#FFF',
+        strokeStyle: '#FFF'
       })
     }
     for (let item of this[CANVAS.GRAPHIC].graphic.values()) {
@@ -632,15 +638,20 @@ export class Canvas {
       y0,
       x1,
       y1,
+      beginStyle = 'red',
+      endStyle = 'red',
       lineWidth = 3,
       pelWidth = 20,
-      fillStyle = 'red',
+      fillStyle,
       strokeStyle
     } = {}
   ) {
+    const style = ctx.createLinearGradient(x0, y0, x1, y1)
+    style.addColorStop(0, beginStyle)
+    style.addColorStop(1, endStyle)
+    ctx.fillStyle = fillStyle || style
+    ctx.strokeStyle = strokeStyle || style
     ctx.lineWidth = lineWidth
-    ctx.fillStyle = fillStyle
-    ctx.strokeStyle = strokeStyle || fillStyle
     const lineLength = Math.abs(x1 - x0) + Math.abs(y1 - y0)
     let head = null
     let tail1 = null

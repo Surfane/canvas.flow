@@ -128,7 +128,7 @@
                 "y":350,
                 "width":60,
                 "height":40,
-                "fillStyle":"black"
+                "fillStyle":"orange"
             }
         },
         {
@@ -141,7 +141,7 @@
                 "y":220,
                 "width":60,
                 "height":40,
-                "fillStyle":"white"
+                "fillStyle":"black"
             }
         },
         {
