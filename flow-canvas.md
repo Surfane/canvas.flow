@@ -12,8 +12,8 @@
 > - context = canvas.***getContext(*** *contextId:* ***string)***
 ### 1.2. Context 方法
 ##### 1.2.1. 获取上下文 *getContext(contextId)*
-##### 1.2.2. 保存画布状态 save()
-##### 1.2.3. 重置画布状态 restore()
+##### 1.2.2. 保存画布状态 *save()*
+##### 1.2.3. 重置画布状态 *restore()*
 ##### 1.2.4. 开始: *beginPath()*
 ##### 1.2.5. 结束: *closePath()*
 ##### 1.2.6. 画框: *stroke()*
