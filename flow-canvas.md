@@ -7,7 +7,7 @@
 > - 需定义宽(***width : number***),高(***height : number***)属性(***attribute***)
 > - 无法直接使用页面样式(***css***)修改
 ##### 1.1.2. 上下文,实际编码绘制操作对象: ***context : RenderingContext***
-> - 目前使用 ***"2d"*** 模式(***contextIdg***)
+> - 目前使用 ***"2d"*** 模式(***contextId***)
 > - 画布绘制方法都基于上下文
 > - context = canvas.***getContext(*** *contextId:* ***string)***
 ### 1.2. Context 方法
