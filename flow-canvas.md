@@ -6,25 +6,27 @@
 ##### 1.1.1. 画布,页面容器: ***canvas : HtmlCanvasElement***
 > - 需定义宽(***width : number***),高(***height : number***)属性(***attribute***)
 > - 无法直接使用页面样式(***css***)修改
-##### 1.1.2. 上下文,实际编码绘制操作对象: ***context***
-> - 目前使用 ***"2d"*** 模式(mode)
+##### 1.1.2. 上下文,实际编码绘制操作对象: ***context : RenderingContext***
+> - 目前使用 ***"2d"*** 模式(***contextIdg***)
 > - 画布绘制方法都基于上下文
-> - context = canvas.***getContext(*** *mode* ***)***
+> - context = canvas.***getContext(*** *contextId:* ***string)***
 ### 1.2. Context 方法
-##### 1.2.1. 获取上下文 *getContext(mode)*
-##### 1.2.2. 开始: *beginPath()*
-##### 1.2.3. 结束: *closePath()*
-##### 1.2.4. 画框: *stroke()*
-##### 1.2.5. 填充: *fill()*
-##### 1.2.6. 起点: *moveTo(x,y)*
-##### 1.2.7. 画线: *lineTo(x,y)*
-##### 1.2.8. 画方形: *rect(x,y,width,height)*
-##### 1.2.9. 擦除方形: *clearRect(x,y,width,height)*
-##### 1.2.10. 画圆(弧)形: *arc(x, y, r, 0, 2 * Math.PI)*
-##### 1.2.11. 填充文本: *fillText(text,x,y)*
-##### 1.2.12. 缩放: *scale(x,y)*
-##### 1.2.13. 平移: *translate(x,y)*
-##### 1.2.14. 线性渐变: *createLinearGradient(x0,y0,x1,y1)*
+##### 1.2.1. 获取上下文 *getContext(contextId)*
+##### 1.2.2. 保存画布状态 save()
+##### 1.2.3. 重置画布状态 restore()
+##### 1.2.4. 开始: *beginPath()*
+##### 1.2.5. 结束: *closePath()*
+##### 1.2.6. 画框: *stroke()*
+##### 1.2.7. 填充: *fill()*
+##### 1.2.8. 起点: *moveTo(x,y)*
+##### 1.2.9. 画线: *lineTo(x,y)*
+##### 1.2.10. 画方形: *rect(x,y,width,height)*
+##### 1.2.11. 擦除方形: *clearRect(x,y,width,height)*
+##### 1.2.12. 画圆(弧)形: *arc(x, y, r, 0, 2 * Math.PI)*
+##### 1.2.13. 填充文本: *fillText(text,x,y)*
+##### 1.2.14. 缩放: *scale(x,y)*
+##### 1.2.15. 平移: *translate(x,y)*
+##### 1.2.16. 线性渐变: *createLinearGradient(x0,y0,x1,y1)*
 ### 1.3. Context 属性
 ##### 1.3.1. 线条宽度: *lineWidth*
 ##### 1.3.2. 线框样式: *strokeStyle*
@@ -101,12 +103,9 @@ object = { // 图像对象格式
 > - 当前选中矢量的起点数据 ***vectorBegin : Object*** 与终点数据 ***vectorEnd : Object***
 ```javascript
 object = { // 矢量对象格式
-  x0:'起点X轴坐标',
-  y0:'起点y轴坐标',
-  x1:'终点x轴坐标',
-  y1:'终点y轴坐标',
-  begin:'起点图像id',
-  end:'终点图像id'
+  begin:'起点图像数据',
+  end:'终点图像数据',
+  condition: '条件'
 }
 ```
 ##### 2.2.3. 回调函数: ***EVENT.CALL_BACK***,画布事件回调传参
@@ -375,7 +374,7 @@ GRAPHIC_TYPE = {
             "id":"2",
             "name":"task1",
             "type":"task",
-            "next":"3",
+            "next":{"id":"3","condition" : "检验通过"},
             "style":{
                 "x":200,
                 "y":200,
@@ -388,7 +387,7 @@ GRAPHIC_TYPE = {
             "id":"3",
             "name":"task2",
             "type":"task",
-            "next":"4",
+            "next":["4","5"],
             "style":{
                 "x":300,
                 "y":60,
@@ -401,7 +400,7 @@ GRAPHIC_TYPE = {
             "id":"4",
             "name":"judge1",
             "type":"judge",
-            "next":["5","6"],
+            "next":[{"id":"5","condition":"OK"},{"id":"6","condition":"NG"}],
             "style":{
                 "x":500,
                 "y":150,
