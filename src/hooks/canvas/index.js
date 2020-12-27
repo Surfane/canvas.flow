@@ -6,13 +6,17 @@ const DEFAULT_CONFIG = {
     height: 300,
     showGrid: false,
     gridSpace: 20,
-    scaleX: 1,
-    scaleY: 1,
-    translateX: 0,
-    translateY: 0,
-    draggable: false
+    waitLink: false,
+    draggable: false,
+    draggableAll: false,
+    draggableElement: false,
+    scale: { x: 1, y: 1 },
+    scaled: { x: 1, y: 1 },
+    translate: { x: 0, y: 0 },
+    translated: { x: 0, y: 0 }
   },
   style: {
+    font: '12px Arial',
     textBaseline: 'hanging',
     textAlign: 'center',
     fillStyle: '#DCDCDC',
@@ -28,8 +32,8 @@ const GRAPHIC_TYPE = {
   JUDGE: 'RHOMB'
 }
 const EVENT = {
-  CALL_BACK: Symbol(), // 所有传入的回调事件
-  INIT: Symbol(), // 绑定所有事件
+  INIT: Symbol(),
+  CALL_BACK: Symbol(),
   WINDOW: {
     ONKYEDOWN: {
       NAME: 'keydown',
@@ -87,7 +91,7 @@ const EVENT = {
       DRAW: Symbol(),
       JUDGE: Symbol()
     },
-    LINE: {
+    VECTOR: {
       DRAW: Symbol(),
       JUDGE: Symbol()
     }
@@ -112,51 +116,49 @@ const guid = () => {
 }
 
 export class Canvas {
-  constructor(canvasElement, config = DEFAULT_CONFIG, canvasEvent = {}, data) {
-    this[EVENT.CALL_BACK] = { ...canvasEvent } // 回调事件
+  constructor(canvasElement, config, data, canvasEvent = {}) {
+    const defaultConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG))
+    const parData = JSON.parse(JSON.stringify(data))
+    let parConfig = JSON.parse(JSON.stringify(config))
+    parConfig = {
+      ...defaultConfig,
+      ...config,
+      frame: { ...defaultConfig.frame, ...(parConfig && parConfig.frame) },
+      style: { ...defaultConfig.style, ...(parConfig && parConfig.style) }
+    }
+    this[EVENT.CALL_BACK] = { ...canvasEvent }
     this[CANVAS.GRAPHIC] = {
-      graphic: new Map(), // 所有图像数据,Map()对象
-      activeGraphic: null, // 被选中图像对象
-      addGraphic: null // 将被添加进来的图像对象
+      graphic: new Map(),
+      activeGraphic: null,
+      addGraphic: null
     }
     this[CANVAS.VECTOR] = {
-      vector: [], // 所有连接矢量,对象数组
-      activeVector: null, // 被选中的连接矢量
-      VectorBegin: null, // 连接矢量起点图像对象
-      VectorEnd: null // 连接矢量终点图像对象
+      vector: [],
+      activeVector: null,
+      vectorBegin: null,
+      vectorEnd: null
     }
     this[CANVAS.POINT] = {
-      origin: { x: 0, y: 0 } // 拖动的相对起点
+      origin: { x: 0, y: 0 }
     }
-    this[CANVAS.STYLE] = null // 画布样式
-    this[CANVAS.FRAME] = null // 画布尺寸,缩放及拖动状态等
+    this[CANVAS.STYLE] = null
+    this[CANVAS.FRAME] = null
     this[CANVAS.CANVAS] =
-      canvasElement ||
-      document.getElementById({ ...DEFAULT_CONFIG, ...config }.canvasId)
-    this[CANVAS.CONTEXT] = this[CANVAS.CANVAS].getContext(
-      { ...DEFAULT_CONFIG, ...config }.canvasMode
-    )
-    this.setData(data)
-    this.init(config || DEFAULT_CONFIG)
+      canvasElement || document.getElementById(parConfig.canvasId)
+    this[CANVAS.CONTEXT] = this[CANVAS.CANVAS].getContext(parConfig.canvasMode)
+    this.setData(parData)
+    this.init(parConfig)
   }
 
   init(config) {
     if (this[CANVAS.CONTEXT]) {
       if (config) {
         this[CANVAS.FRAME] = {
-          ...DEFAULT_CONFIG.frame,
-          ...(config && config.frame),
-          scaled: { x: 1, y: 1 }, // 整个过程被缩放的结果
-          waitLink: false,
-          draggableAll: false,
-          draggableElement: false,
+          ...config.frame,
           width: this[CANVAS.CANVAS].width,
           height: this[CANVAS.CANVAS].height
         }
-        this[CANVAS.STYLE] = {
-          ...DEFAULT_CONFIG.style,
-          ...(config && config.style)
-        }
+        this[CANVAS.STYLE] = config.style
         this[EVENT.INIT]()
       }
       this[CANVAS.CONTEXT] = Object.assign(
@@ -164,14 +166,8 @@ export class Canvas {
         this[CANVAS.STYLE]
       )
       this[CANVAS.CONTEXT].scale(
-        this[CANVAS.FRAME].scaleX,
-        this[CANVAS.FRAME].scaleY
-      )
-      this[CANVAS.CONTEXT].clearRect(
-        0,
-        0,
-        this[CANVAS.FRAME].width,
-        this[CANVAS.FRAME].height
+        this[CANVAS.FRAME].scale.x,
+        this[CANVAS.FRAME].scale.y
       )
       this[CANVAS.CONTEXT].fillRect(
         0,
@@ -179,14 +175,13 @@ export class Canvas {
         this[CANVAS.FRAME].width,
         this[CANVAS.FRAME].height
       )
-      this[EVENT.GRAPHIC.DRAW_GRID](this[CANVAS.CONTEXT], this[CANVAS.FRAME])
       this[EVENT.GRAPHIC.DRAW]()
     }
   }
 
   scale(dx = 1, dy = 1) {
-    this[CANVAS.FRAME].scaleX = dx
-    this[CANVAS.FRAME].scaleY = dy
+    this[CANVAS.FRAME].scale.x = dx
+    this[CANVAS.FRAME].scale.y = dy
     this[CANVAS.FRAME].scaled.x *= dx
     this[CANVAS.FRAME].scaled.y *= dy
     this[CANVAS.FRAME].width =
@@ -206,10 +201,8 @@ export class Canvas {
 
   setData(data) {
     if (data) {
-      this[CANVAS.GRAPHIC].graphic = this[EVENT.GRAPHIC.SET_GRAPHIC](data)
-      this[CANVAS.VECTOR].vector = this[EVENT.GRAPHIC.SET_VECTOR](
-        this[CANVAS.GRAPHIC].graphic
-      )
+      this[EVENT.GRAPHIC.SET_GRAPHIC](data)
+      this[EVENT.GRAPHIC.SET_VECTOR]()
     }
   }
 
@@ -235,7 +228,7 @@ export class Canvas {
         this[EVENT.CALL_BACK][item] &&
           this[EVENT.CALL_BACK][item](
             event,
-            this[EVENT.GRAPHIC.GET_GRAPHIC](this[CANVAS.GRAPHIC].graphic, event)
+            this[EVENT.GRAPHIC.GET_GRAPHIC](event)
           )
       }
     }
@@ -287,9 +280,7 @@ export class Canvas {
           graphic.next = null
         }
         this[CANVAS.VECTOR].activeVector = null
-        this[CANVAS.VECTOR].vector = this[EVENT.GRAPHIC.SET_VECTOR](
-          this[CANVAS.GRAPHIC].graphic
-        )
+        this[EVENT.GRAPHIC.SET_VECTOR]()
         this.draw()
       }
       if (this[CANVAS.GRAPHIC].activeGraphic) {
@@ -297,9 +288,7 @@ export class Canvas {
           this[CANVAS.GRAPHIC].activeGraphic.id
         )
         this[CANVAS.GRAPHIC].activeGraphic = null
-        this[CANVAS.VECTOR].vector = this[EVENT.GRAPHIC.SET_VECTOR](
-          this[CANVAS.GRAPHIC].graphic
-        )
+        this[EVENT.GRAPHIC.SET_VECTOR]()
         this.draw()
       }
     }
@@ -319,20 +308,16 @@ export class Canvas {
     const dx = newPosition.x - this[CANVAS.POINT].origin.x
     const dy = newPosition.y - this[CANVAS.POINT].origin.y
     if (this[CANVAS.FRAME].draggableElement) {
-      this[CANVAS.GRAPHIC].activeGraphic.style.x += dx
-      this[CANVAS.GRAPHIC].activeGraphic.style.y += dy
-      this[CANVAS.VECTOR].vector = this[EVENT.GRAPHIC.SET_VECTOR](
-        this[CANVAS.GRAPHIC].graphic
-      )
+      this[CANVAS.GRAPHIC].activeGraphic.style.x +=
+        dx / this[CANVAS.FRAME].scaled.x
+      this[CANVAS.GRAPHIC].activeGraphic.style.y +=
+        dy / this[CANVAS.FRAME].scaled.y
       this.draw()
     } else if (this[CANVAS.FRAME].draggableAll) {
       for (let item of this[CANVAS.GRAPHIC].graphic.values()) {
-        item.style.x += dx
-        item.style.y += dy
+        item.style.x += dx / this[CANVAS.FRAME].scaled.x
+        item.style.y += dy / this[CANVAS.FRAME].scaled.y
       }
-      this[CANVAS.VECTOR].vector = this[EVENT.GRAPHIC.SET_VECTOR](
-        this[CANVAS.GRAPHIC].graphic
-      )
       this.draw()
     }
     this[CANVAS.POINT].origin = newPosition
@@ -348,7 +333,8 @@ export class Canvas {
         ...this[CANVAS.GRAPHIC].addGraphic,
         style: {
           ...this[CANVAS.GRAPHIC].addGraphic.style,
-          ...this[CANVAS.POINT].origin
+          x: event.offsetX / this[CANVAS.FRAME].scaled.x,
+          y: event.offsetY / this[CANVAS.FRAME].scaled.y
         }
       }
       this[CANVAS.GRAPHIC].graphic.set(
@@ -361,17 +347,13 @@ export class Canvas {
       this.draw()
     } else {
       this[CANVAS.GRAPHIC].activeGraphic = this[EVENT.GRAPHIC.GET_GRAPHIC](
-        this[CANVAS.GRAPHIC].graphic,
         event
       )
       if (this[CANVAS.GRAPHIC].activeGraphic) {
         this[CANVAS.FRAME].draggableElement = true
       } else {
         this[CANVAS.FRAME].draggableElement = false
-        this[CANVAS.VECTOR].activeVector = this[EVENT.GRAPHIC.GET_VECTOR](
-          this[CANVAS.VECTOR].vector,
-          event
-        )
+        this[CANVAS.VECTOR].activeVector = this[EVENT.GRAPHIC.GET_VECTOR](event)
         this[CANVAS.FRAME].draggableAll = !this[CANVAS.FRAME].draggableElement
       }
       if (
@@ -401,56 +383,52 @@ export class Canvas {
     if (this[CANVAS.FRAME].waitLink) {
       this[CANVAS.FRAME].waitLink = false
       this[CANVAS.GRAPHIC].activeGraphic = null
-      this[CANVAS.GRAPHIC].graphic.delete(this[CANVAS.VECTOR].VectorEnd.id)
-      const stoppedGraphic = this[EVENT.GRAPHIC.GET_GRAPHIC](
-        this[CANVAS.GRAPHIC].graphic,
-        event
-      )
-      if (stoppedGraphic) {
-        if (this[CANVAS.VECTOR].VectorBegin.next) {
-          this[CANVAS.VECTOR].VectorBegin.next =
-            this[CANVAS.VECTOR].VectorBegin.next instanceof Array
-              ? [...this[CANVAS.VECTOR].VectorBegin.next, stoppedGraphic.id]
-              : [this[CANVAS.VECTOR].VectorBegin.next, stoppedGraphic.id]
+      this[CANVAS.GRAPHIC].graphic.delete(this[CANVAS.VECTOR].vectorEnd.id)
+      const stoppedGraphic = this[EVENT.GRAPHIC.GET_GRAPHIC](event)
+      if (stoppedGraphic && this[CANVAS.VECTOR].vectorBegin) {
+        if (this[CANVAS.VECTOR].vectorBegin.next) {
+          this[CANVAS.VECTOR].vectorBegin.next =
+            this[CANVAS.VECTOR].vectorBegin.next instanceof Array
+              ? [...this[CANVAS.VECTOR].vectorBegin.next, stoppedGraphic.id]
+              : [this[CANVAS.VECTOR].vectorBegin.next, stoppedGraphic.id]
         } else {
-          this[CANVAS.VECTOR].VectorBegin.next = stoppedGraphic.id
+          this[CANVAS.VECTOR].vectorBegin.next = stoppedGraphic.id
         }
       } else {
         this[CANVAS.VECTOR].activeVector = null
       }
-      this[CANVAS.VECTOR].vector = this[EVENT.GRAPHIC.SET_VECTOR](
-        this[CANVAS.GRAPHIC].graphic
-      )
+      this[EVENT.GRAPHIC.SET_VECTOR]()
       this.draw()
     }
   };
 
   [EVENT.CANVAS.ONDBLCLICK.EVENT] = event => {
-    this[CANVAS.VECTOR].VectorBegin = this[EVENT.GRAPHIC.GET_GRAPHIC](
-      this[CANVAS.GRAPHIC].graphic,
-      event
-    )
-    if (this[CANVAS.VECTOR].VectorBegin) {
+    this[CANVAS.VECTOR].vectorBegin = this[EVENT.GRAPHIC.GET_GRAPHIC](event)
+    if (this[CANVAS.VECTOR].vectorBegin) {
       this[CANVAS.GRAPHIC].activeGraphic = {
         id: guid(),
         type: 'TEMP',
-        style: { x: event.offsetX, y: event.offsetY }
+        style: {
+          x: event.offsetX / this[CANVAS.FRAME].scaled.x,
+          y: event.offsetY / this[CANVAS.FRAME].scaled.y
+        }
       }
       this[CANVAS.GRAPHIC].graphic.set(
         this[CANVAS.GRAPHIC].activeGraphic.id,
         this[CANVAS.GRAPHIC].activeGraphic
       )
-      this[CANVAS.VECTOR].VectorEnd = this[CANVAS.GRAPHIC].activeGraphic
-      this[CANVAS.VECTOR].VectorBegin.next =
-        this[CANVAS.VECTOR].VectorBegin.next instanceof Array
+      this[CANVAS.VECTOR].vectorEnd = this[CANVAS.GRAPHIC].activeGraphic
+      this[CANVAS.VECTOR].vectorBegin.next =
+        this[CANVAS.VECTOR].vectorBegin.next instanceof Array
           ? [
-              ...this[CANVAS.VECTOR].VectorBegin.next,
+              ...this[CANVAS.VECTOR].vectorBegin.next,
               this[CANVAS.GRAPHIC].activeGraphic.id
             ]
           : [
-              this[CANVAS.VECTOR].VectorBegin.next,
+              this[CANVAS.VECTOR].vectorBegin.next,
               this[CANVAS.GRAPHIC].activeGraphic.id
             ]
+      this[EVENT.GRAPHIC.SET_VECTOR]()
       this[CANVAS.FRAME].waitLink = true
       this[CANVAS.FRAME].draggableAll = false
       this[CANVAS.FRAME].draggableElement = true
@@ -458,21 +436,31 @@ export class Canvas {
   };
 
   [EVENT.GRAPHIC.DRAW]() {
+    this[EVENT.GRAPHIC.DRAW_GRID](this[CANVAS.CONTEXT], this[CANVAS.FRAME])
     this[CANVAS.VECTOR].vector.map(item => {
-      this[EVENT.GRAPHIC.LINE.DRAW](this[CANVAS.CONTEXT], {
-        ...item,
-        beginStyle: this[CANVAS.GRAPHIC].graphic.get(item.begin).style
-          .fillStyle,
-        endStyle: this[CANVAS.GRAPHIC].graphic.get(item.end).style.fillStyle
+      this[EVENT.GRAPHIC.VECTOR.DRAW](this[CANVAS.CONTEXT], {
+        x0: item.begin.style.x,
+        y0: item.begin.style.y,
+        x1: item.end.style.x,
+        y1: item.end.style.y,
+        condition: item.condition,
+        beginStyle: item.begin.style.fillStyle,
+        endStyle: item.end.style.fillStyle
       })
     })
     if (this[CANVAS.VECTOR].activeVector) {
-      this[EVENT.GRAPHIC.DRAW_ACTIVE_VECTOR](
-        this[CANVAS.CONTEXT],
-        this[CANVAS.VECTOR].activeVector
-      )
-      this[EVENT.GRAPHIC.LINE.DRAW](this[CANVAS.CONTEXT], {
-        ...this[CANVAS.VECTOR].activeVector,
+      this[EVENT.GRAPHIC.DRAW_ACTIVE_VECTOR](this[CANVAS.CONTEXT], {
+        x: this[CANVAS.VECTOR].activeVector.end.style.x,
+        y: this[CANVAS.VECTOR].activeVector.begin.style.y,
+        r: 3,
+        style: '#FFF'
+      })
+      this[EVENT.GRAPHIC.VECTOR.DRAW](this[CANVAS.CONTEXT], {
+        x0: this[CANVAS.VECTOR].activeVector.begin.style.x,
+        y0: this[CANVAS.VECTOR].activeVector.begin.style.y,
+        x1: this[CANVAS.VECTOR].activeVector.end.style.x,
+        y1: this[CANVAS.VECTOR].activeVector.end.style.y,
+        condition: this[CANVAS.VECTOR].activeVector.condition,
         fillStyle: '#FFF',
         strokeStyle: '#FFF'
       })
@@ -506,26 +494,9 @@ export class Canvas {
     }
   }
 
-  [EVENT.GRAPHIC.DRAW_GRID](
-    ctx,
-    { showGrid: flag, x = 0, y = 0, width = 0, height = 0, space = 20 } = {}
-  ) {
-    if (ctx && flag) {
-      ctx.beginPath()
-      for (let dx = x; dx < x + width; dx += space) {
-        ctx.moveTo(dx, y)
-        ctx.lineTo(dx, y + height)
-      }
-      for (let dy = y; dy < y + height; dy += space) {
-        ctx.moveTo(x, dy)
-        ctx.lineTo(x + width, dy)
-      }
-      ctx.stroke()
-    }
-  }
-
-  [EVENT.GRAPHIC.GET_GRAPHIC](graphic, event) {
-    for (let item of graphic.values()) {
+  [EVENT.GRAPHIC.GET_GRAPHIC](event) {
+    const { offsetX: x1, offsetY: y1 } = event
+    for (let item of this[CANVAS.GRAPHIC].graphic.values()) {
       let { x, y, r, width, height } = item.style
       x *= this[CANVAS.FRAME].scaled.x
       y *= this[CANVAS.FRAME].scaled.y
@@ -536,7 +507,7 @@ export class Canvas {
         item.type &&
         this[EVENT.GRAPHIC[GRAPHIC_TYPE[item.type.toUpperCase()]].JUDGE](
           { x, y, r, width, height },
-          event
+          { x1, y1 }
         )
       ) {
         return item
@@ -545,57 +516,66 @@ export class Canvas {
   }
 
   [EVENT.GRAPHIC.SET_GRAPHIC](data) {
+    this[CANVAS.GRAPHIC].graphic.clear()
     if (data) {
-      let graphic = new Map()
       data.map(item => {
-        graphic.set(item.id || item.type, item)
+        this[CANVAS.GRAPHIC].graphic.set(item.id || item.type, item)
       })
-      return graphic
     }
   }
 
-  [EVENT.GRAPHIC.GET_VECTOR](vector, event, offset = 10) {
+  [EVENT.GRAPHIC.GET_VECTOR](event, offset = 10) {
     let { offsetX: x, offsetY: y } = event
     x /= this[CANVAS.FRAME].scaled.x
     y /= this[CANVAS.FRAME].scaled.y
-    for (let item of vector) {
-      if (this[EVENT.GRAPHIC.LINE.JUDGE](item, { x, y, offset })) {
+    for (let item of this[CANVAS.VECTOR].vector) {
+      if (
+        this[EVENT.GRAPHIC.VECTOR.JUDGE](
+          {
+            x0: item.begin.style.x,
+            y0: item.begin.style.y,
+            x1: item.end.style.x,
+            y1: item.end.style.y
+          },
+          { x, y, offset }
+        )
+      ) {
         return item
       }
     }
   }
 
-  [EVENT.GRAPHIC.SET_VECTOR](graphic) {
-    if (graphic) {
-      let vector = []
-      for (let item of graphic.values()) {
-        if (item.next) {
-          const { x: x0, y: y0 } = item.style
-          const nextArray = item.next instanceof Array ? item.next : [item.next]
+  [EVENT.GRAPHIC.SET_VECTOR]() {
+    this[CANVAS.VECTOR].vector = []
+    if (this[CANVAS.GRAPHIC].graphic) {
+      for (let begin of this[CANVAS.GRAPHIC].graphic.values()) {
+        if (begin.next) {
+          const nextArray =
+            begin.next instanceof Array ? begin.next : [begin.next]
           for (let next of nextArray) {
-            if (graphic.get(next)) {
-              const { x: x1, y: y1 } = graphic.get(next).style
-              vector = [
-                ...vector,
-                { x0, y0, x1, y1, begin: item.id, end: next }
+            next = next instanceof Object ? next : { id: next }
+            if (this[CANVAS.GRAPHIC].graphic.get(next.id)) {
+              const end = this[CANVAS.GRAPHIC].graphic.get(next.id)
+              this[CANVAS.VECTOR].vector = [
+                ...this[CANVAS.VECTOR].vector,
+                { begin, end, condition: next.condition }
               ]
             }
           }
         }
       }
-      return vector
     }
   }
 
   [EVENT.GRAPHIC.DRAW_ACTIVE_GRAPHIC](
     ctx,
-    { width, height, x, y, r = 0, activeStyle = '#FFF' } = {}
+    { width, height, x, y, r = 0, style = '#FFF' } = {}
   ) {
     width = width || 2 * r
     height = height || 2 * r
     r = 3
-    ctx.fillStyle = activeStyle
-    ctx.strokeStyle = activeStyle
+    ctx.fillStyle = style
+    ctx.strokeStyle = style
     ctx.beginPath()
     ctx.arc(x, y - height / 2, r, 0, 2 * Math.PI)
     ctx.closePath()
@@ -620,24 +600,43 @@ export class Canvas {
 
   [EVENT.GRAPHIC.DRAW_ACTIVE_VECTOR](
     ctx,
-    { x1, y0, r = 3, activeStyle = '#FFF' } = {}
+    { x, y, r = 3, style = '#FFF' } = {}
   ) {
-    ctx.fillStyle = activeStyle
-    ctx.strokeStyle = activeStyle
+    ctx.fillStyle = style
+    ctx.strokeStyle = style
     ctx.beginPath()
-    ctx.arc(x1, y0, r, 0, 2 * Math.PI)
+    ctx.arc(x, y, r, 0, 2 * Math.PI)
     ctx.closePath()
     ctx.fill()
     ctx.stroke()
   }
 
-  [EVENT.GRAPHIC.LINE.DRAW](
+  [EVENT.GRAPHIC.DRAW_GRID](
+    ctx,
+    { showGrid: flag, x = 0, y = 0, width = 0, height = 0, space = 20 } = {}
+  ) {
+    if (ctx && flag) {
+      ctx.beginPath()
+      for (let dx = x; dx < x + width; dx += space) {
+        ctx.moveTo(dx, y)
+        ctx.lineTo(dx, y + height)
+      }
+      for (let dy = y; dy < y + height; dy += space) {
+        ctx.moveTo(x, dy)
+        ctx.lineTo(x + width, dy)
+      }
+      ctx.stroke()
+    }
+  }
+
+  [EVENT.GRAPHIC.VECTOR.DRAW](
     ctx,
     {
       x0,
       y0,
       x1,
       y1,
+      condition,
       beginStyle = 'red',
       endStyle = 'red',
       lineWidth = 3,
@@ -701,6 +700,9 @@ export class Canvas {
     ctx.closePath()
     ctx.fill()
     ctx.stroke()
+    if (condition) {
+      ctx.fillText(condition, head.x - pelWidth / 2, head.y + pelWidth / 2)
+    }
   }
 
   [EVENT.GRAPHIC.CIRCLE.DRAW](
@@ -757,7 +759,7 @@ export class Canvas {
     }
   }
 
-  [EVENT.GRAPHIC.LINE.JUDGE](
+  [EVENT.GRAPHIC.VECTOR.JUDGE](
     { x0, y0, x1, y1 } = {},
     { x, y, offset = 10 } = {}
   ) {
@@ -769,7 +771,7 @@ export class Canvas {
 
   [EVENT.GRAPHIC.CIRCLE.JUDGE](
     { x, y, r, width = 0, height = 0 } = {},
-    { offsetX: x1, offsetY: y1 } = {}
+    { x1, y1 } = {}
   ) {
     r = r || width / 2 || height / 2
     return Math.pow(x1 - x, 2) + Math.pow(y1 - y, 2) <= Math.pow(r, 2)
@@ -777,7 +779,7 @@ export class Canvas {
 
   [EVENT.GRAPHIC.RECTANGLE.JUDGE](
     { x, y, width, height, r = 0 } = {},
-    { offsetX: x1, offsetY: y1 } = {}
+    { x1, y1 } = {}
   ) {
     width = width || 2 * r
     height = height || 2 * r
@@ -791,7 +793,7 @@ export class Canvas {
 
   [EVENT.GRAPHIC.RHOMB.JUDGE](
     { x, y, width, height, r = 0 } = {},
-    { offsetX: x1, offsetY: y1 } = {}
+    { x1, y1 } = {}
   ) {
     width = width || 2 * r
     height = height || 2 * r

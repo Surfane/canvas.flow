@@ -41,7 +41,7 @@ export default defineComponent({
 
     const templateEvent = {
       onClick: (event, data) => {
-        addGraphic = { ...data }
+        addGraphic = data
       }
     }
 
@@ -65,13 +65,14 @@ export default defineComponent({
       canvasTemplate = new Canvas(
         templateCanvas.value,
         null,
-        templateEvent,
-        templateData
+        templateData,
+        templateEvent
       )
       // 先初始化后绘图
       canvasFrame = new Canvas(
         frameCanvas.value,
         { frame: { showGrid: true, draggable: true } },
+        null,
         frameEvent
       )
       canvasFrame.setData(frameData)

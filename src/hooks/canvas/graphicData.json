@@ -83,7 +83,7 @@
             "id":"2",
             "name":"task1",
             "type":"task",
-            "next":"3",
+            "next":{"id":"3","condition" : "检验通过"},
             "style":{
                 "x":200,
                 "y":200,
@@ -96,7 +96,7 @@
             "id":"3",
             "name":"task2",
             "type":"task",
-            "next":"4",
+            "next":["4","5"],
             "style":{
                 "x":300,
                 "y":60,
@@ -109,7 +109,7 @@
             "id":"4",
             "name":"judge1",
             "type":"judge",
-            "next":["5","6"],
+            "next":[{"id":"5","condition":"OK"},{"id":"6","condition":"NG"}],
             "style":{
                 "x":500,
                 "y":150,
