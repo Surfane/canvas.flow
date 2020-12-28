@@ -266,12 +266,12 @@ export class Canvas {
     event.stopPropagation()
     if (46 === event.keyCode) {
       if (this[CANVAS.VECTOR].activeVector) {
-        const graphic = this[CANVAS.GRAPHIC].graphic.get(
-          this[CANVAS.VECTOR].activeVector.begin
-        )
+        const graphic = this[CANVAS.VECTOR].activeVector.begin
         if (graphic.next instanceof Array) {
           graphic.next = graphic.next.filter(
-            item => item !== this[CANVAS.VECTOR].activeVector.end
+            item =>
+              item !== this[CANVAS.VECTOR].activeVector.end.id &&
+              item.id !== this[CANVAS.VECTOR].activeVector.end.id
           )
           if (graphic.next.length <= 1) {
             graphic.next = graphic.next[0]
@@ -284,6 +284,20 @@ export class Canvas {
         this.draw()
       }
       if (this[CANVAS.GRAPHIC].activeGraphic) {
+        for (let graphic of this[CANVAS.GRAPHIC].graphic.values()) {
+          if (graphic.next) {
+            graphic.next =
+              graphic.next instanceof Array ? graphic.next : [graphic.next]
+            graphic.next = graphic.next.filter(
+              item =>
+                item !== this[CANVAS.GRAPHIC].activeGraphic.id &&
+                item.id !== this[CANVAS.GRAPHIC].activeGraphic.id
+            )
+            if (graphic.next.length <= 1) {
+              graphic.next = graphic.next[0]
+            }
+          }
+        }
         this[CANVAS.GRAPHIC].graphic.delete(
           this[CANVAS.GRAPHIC].activeGraphic.id
         )
@@ -303,7 +317,6 @@ export class Canvas {
   [EVENT.CANVAS.ONMOUSEMOVE.EVENT] = event => {
     event.preventDefault()
     event.stopPropagation()
-    this[CANVAS.VECTOR].activeVector = null
     const newPosition = { x: event.offsetX, y: event.offsetY }
     const dx = newPosition.x - this[CANVAS.POINT].origin.x
     const dy = newPosition.y - this[CANVAS.POINT].origin.y
@@ -341,6 +354,7 @@ export class Canvas {
         this[CANVAS.GRAPHIC].activeGraphic.id,
         this[CANVAS.GRAPHIC].activeGraphic
       )
+      this[CANVAS.VECTOR].activeVector = null
       this[CANVAS.FRAME].draggableElement = true
       this[CANVAS.FRAME].draggableAll = false
       this[CANVAS.GRAPHIC].addGraphic = null
@@ -350,11 +364,13 @@ export class Canvas {
         event
       )
       if (this[CANVAS.GRAPHIC].activeGraphic) {
+        this[CANVAS.VECTOR].activeVector = null
         this[CANVAS.FRAME].draggableElement = true
+        this[CANVAS.FRAME].draggableAll = false
       } else {
-        this[CANVAS.FRAME].draggableElement = false
         this[CANVAS.VECTOR].activeVector = this[EVENT.GRAPHIC.GET_VECTOR](event)
-        this[CANVAS.FRAME].draggableAll = !this[CANVAS.FRAME].draggableElement
+        this[CANVAS.FRAME].draggableElement = false
+        this[CANVAS.FRAME].draggableAll = true
       }
       if (
         this[CANVAS.VECTOR].activeVector ||
